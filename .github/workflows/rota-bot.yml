@@ -1,0 +1,39 @@
+name: Rota bot
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # every 5 minutes
+  workflow_dispatch:         # lets you start it manually from the Actions tab
+
+concurrency:
+  group: rota-bot
+  cancel-in-progress: false
+
+permissions:
+  contents: write            # needed so the bot can save its memory (state.enc)
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run bot
+        run: python run.py
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+
+      - name: Save memory
+        run: |
+          git config user.name "rota-bot"
+          git config user.email "rota-bot@users.noreply.github.com"
+          git add state.enc 2>/dev/null || true
+          git diff --cached --quiet || (git commit -m "Update bot state" && git push)
